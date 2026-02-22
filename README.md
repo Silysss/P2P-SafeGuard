@@ -189,17 +189,17 @@ sequenceDiagram
 ### 7. Plan de Développement (Répartition)
 #### Partie 1 : Core & Storage (Étudiant A)
 
-1. [ ] DB Manager : Implémenter la classe Python gérant le chargement/sauvegarde du JSON.
-2. [ ] Crypto Service : Implémenter AES-GCM avec pycryptodome.
-3. [ ] Context Checker : Script subprocess pour récupérer le BSSID sous Windows/Linux.
-4. [ ] Integration : Relier le tout : Si BSSID OK -> Decrypt -> Return JSON.
+1. [x] DB Manager : Implémenter la classe Python gérant le chargement/sauvegarde du JSON.
+2. [x] Crypto Service : Implémenter AES-GCM avec pycryptodome.
+3. [x] Context Checker : Script subprocess pour récupérer le BSSID sous Windows/Linux.
+4. [x] Integration : Relier le tout : Si BSSID OK -> Decrypt -> Return JSON.
 
 #### Partie 2 : Network & Logic (Étudiant B)
 
-1. [ ] Socket Server : Serveur TCP threadé capable de gérer plusieurs connexions.
-2. [ ] Peer Discovery : Liste statique d'IPs dans un fichier config pour le PoC (ex: peers: ["192.168.1.15"]).
-3. [ ] Gossip Logic : Implémenter la fonction handle_message() avec la logique LWW et Path Vector.
-4. [ ] Integration : Appeler les méthodes du Module A pour lire/écrire les mises à jour reçues.
+1. [x] Socket Server : Serveur TCP threadé capable de gérer plusieurs connexions.
+2. [x] Peer Discovery : Liste statique d'IPs dans un fichier config pour le PoC (ex: peers: ["192.168.1.15"]).
+3. [x] Gossip Logic : Implémenter la fonction handle_message() avec la logique LWW et Path Vector.
+4. [x] Integration : Appeler les méthodes du Module A pour lire/écrire les mises à jour reçues.
 
 ### 8. Sécurité & Limites (Pour le Rapport)
 

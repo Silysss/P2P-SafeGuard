@@ -1,0 +1,12 @@
+{
+  "vault_id": "513bff80-75ba-4838-ab51-c64865ae6f49",
+  "records": [
+    {
+      "uuid": "dede1111-2222-3333-4444-555566667777",
+      "updated_at": 1771786820.3557835,
+      "is_deleted": false,
+      "nonce": "test_nonce_base64_for_docker",
+      "ciphertext": "test_ciphertext_base64_for_docker"
+    }
+  ]
+}

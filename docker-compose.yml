@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  node1:
+    build: .
+    container_name: safeguard_node1
+    environment:
+      - P2P_OS_TARGET=linux
+      - P2P_MOCK_BSSID=B8:27:EB:AA:12:34
+      - P2P_MASTER_PASSWORD=root
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./tests/config_node1.json:/app/config.json
+      - ./tests/scripts:/app/scripts
+      - ./tests/data/vault_node1.json:/app/vault_5000.json
+
+  node2:
+    build: .
+    container_name: safeguard_node2
+    environment:
+      - P2P_OS_TARGET=linux
+      - P2P_MOCK_BSSID=B8:27:EB:AA:12:34
+      - P2P_MASTER_PASSWORD=root
+    volumes:
+      - ./tests/config_node2.json:/app/config.json
+      - ./tests/data/vault_node2.json:/app/vault_5000.json
+
+  node3:
+    build: .
+    container_name: safeguard_node3
+    environment:
+      - P2P_OS_TARGET=linux
+      - P2P_MOCK_BSSID=B8:27:EB:AA:12:34
+      - P2P_MASTER_PASSWORD=root
+    volumes:
+      - ./tests/config_node3.json:/app/config.json
+      - ./tests/data/vault_node3.json:/app/vault_5000.json
