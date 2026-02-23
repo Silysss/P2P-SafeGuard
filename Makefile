@@ -26,7 +26,7 @@ help:
 ## ====== Exécution Locale ======
 cli:
 	@echo "Lancement de P2P-SafeGuard en local..."
-	python main.py
+	./venv/bin/python main.py
 
 ## ====== Tests (Dockerisés) ======
 test-unit:

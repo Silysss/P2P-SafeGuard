@@ -9,6 +9,6 @@
         }
     ],
     "allowed_bssids_hashes": [
-        "example_hash_for_testing_purposes"
+        "aa9c4481944e2636c7834e8438db3d052e3ee55bd1654ce31b2ed20427a2826b"
     ]
 }

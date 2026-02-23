@@ -25,17 +25,17 @@ class ContextChecker:
             raise NotImplementedError(f"OS non supporté pour la récupération du BSSID : {self.os_type}")
 
     def _get_bssid_linux(self):
-        """Stratégie pour Linux (utilise nmcli)."""
+        """Stratégie pour Linux (utilise iwgetid pour plus de rapidité)."""
         try:
-            # Récupérer l'information de la connexion active
+            # iwgetid -a est quasi-instantané (10ms) contrairement à nmcli (4s)
             result = subprocess.run(
-                ["nmcli", "-t", "-f", "BSSID", "dev", "wifi"], 
+                ["iwgetid", "-a"], 
                 capture_output=True, text=True, check=True
             )
-            # nmcli retourne souvent une liste, on prend la première ligne non vide
+            # Sortie typique : wlan0     Access Point/Cell: B6:52:7A:02:72:2C
             for line in result.stdout.splitlines():
-                if line.strip() and ":" in line:
-                    return line.strip().upper()
+                if "Cell:" in line:
+                    return line.split("Cell:")[1].strip().replace('\\', '').upper()
             return None
         except (subprocess.CalledProcessError, FileNotFoundError):
             return None
@@ -72,4 +72,10 @@ class ContextChecker:
             return False
             
         hashed_bssid = self._hash_bssid(current_bssid)
-        return hashed_bssid in self.allowed_bssids_hashes
+        if hashed_bssid not in self.allowed_bssids_hashes:
+            print(f"Erreur : BSSID actuel ({current_bssid}) non reconnu.")
+            print(f"Son Hash (SHA-256) : {hashed_bssid}")
+            print("Veuillez rajouter ce hash dans 'allowed_bssids_hashes' (config.json).")
+            return False
+            
+        return True
