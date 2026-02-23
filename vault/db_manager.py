@@ -36,12 +36,18 @@ class DBManager:
         with open(self.db_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
+    def _reload(self):
+        """Recharge les données depuis le disque pour éviter le désaccord entre processus (Daemon vs CLI)."""
+        self.data = self._load_or_create_db()
+
     def get_password_check(self) -> Optional[dict]:
         """Retourne le bloc de vérification du mot de passe (ciphertext, nonce) s'il existe."""
+        self._reload()
         return self.data.get("password_check")
 
     def set_password_check(self, ciphertext: str, nonce: str):
         """Enregistre le bloc de vérification du mot de passe maître."""
+        self._reload()
         self.data["password_check"] = {
             "ciphertext": ciphertext,
             "nonce": nonce
@@ -50,14 +56,17 @@ class DBManager:
 
     def get_all_records(self) -> List[dict]:
         """Retourne tous les records non supprimés (soft delete exclu)."""
+        self._reload()
         return [r for r in self.data.get("records", []) if not r.get("is_deleted", False)]
         
     def get_raw_records(self) -> List[dict]:
          """Retourne TOUS les records (inclus deleted) pour la synchronisation."""
+         self._reload()
          return self.data.get("records", [])
 
     def get_record(self, record_uuid: str) -> Optional[dict]:
         """Récupère un record spécifique par son UUID (qu'il soit deleted ou non)."""
+        self._reload()
         for record in self.data.get("records", []):
             if record["uuid"] == record_uuid:
                 return record
@@ -69,6 +78,7 @@ class DBManager:
         On met à jour le temps actuel et on sauvegarde.
         Retourne le record complet pour diffusion Gossip.
         """
+        self._reload()
         new_record = {
             "uuid": record_uuid,
             "updated_at": time.time(),

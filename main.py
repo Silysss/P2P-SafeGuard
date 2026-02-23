@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import time
+import argparse
 
 try:
     import questionary
@@ -115,6 +116,10 @@ def run_cli(vault: VaultCore, network: NetworkCore):
             console.print(f"[red]Erreur UI : {e}[/red]")
 
 def main():
+    parser = argparse.ArgumentParser(description="P2P-SafeGuard Node")
+    parser.add_argument("--cli", action="store_true", help="Lancer uniquement l'interface CLI sans démarrer le serveur TCP")
+    args = parser.parse_args()
+
     # 1. Charger la config
     try:
         with open("config.json", "r") as f:
@@ -175,13 +180,14 @@ def main():
     # Lier le Vault au Network (le Vault prévient le réseau quand y'a une maj LOCALE)
     vault.on_sync_trigger = network.trigger_local_update
 
-    # 4. Lancer le serveur TCP asynchrone
-    network.start()
-    
-    # 5. Demander un sync aux pairs (Feature : Récupération du setup depuis un autre noeud)
-    network.request_sync()
-    
-    # 5. Lancer l'UI / CLI ou mode Daemon
+    if not args.cli:
+        # 4. Lancer le serveur TCP asynchrone (Ignoré en mode client simple)
+        network.start()
+        
+        # 5. Demander un sync aux pairs
+        network.request_sync()
+
+    # 6. Lancer l'UI / CLI ou mode Daemon
     if sys.stdin.isatty():
         run_cli(vault, network)
     else:
@@ -192,9 +198,10 @@ def main():
         except KeyboardInterrupt:
             pass
     
-    # 6. Extinction propre
-    print("Arrêt du daemon...")
-    network.stop()
+    # 7. Extinction propre
+    if not args.cli:
+        print("Arrêt du daemon...")
+        network.stop()
 
 if __name__ == "__main__":
     main()

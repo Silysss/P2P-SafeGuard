@@ -103,5 +103,57 @@ class TestP2PSafeGuard(unittest.TestCase):
             if os.path.exists(test_db):
                 os.remove(test_db)
 
+    def test_db_manager_lww(self):
+        """Test de la résolution de conflits par Timestamp (Last Write Wins)"""
+        from vault.db_manager import DBManager
+        
+        test_db = "test_lww.json"
+        if os.path.exists(test_db): os.remove(test_db)
+            
+        try:
+            db = DBManager(test_db)
+            
+            # --- 1. Simulation d'un ajout local à T=100 ---
+            record_id = "abc-123"
+            local_record = db.upsert_record_local(record_id, "ciphertext_v1", "nonce_v1")
+            
+            # Forcer le temps d'écriture manuel (normalement géré par time.time() dans upsert)
+            local_record["updated_at"] = 100.0
+            db._upsert(local_record)
+            
+            # --- 2. Réception d'un Gossip d'un P2P contenant une donnée plus ANCIENNE (T=50) ---
+            old_gossip = {
+                "uuid": record_id,
+                "updated_at": 50.0,
+                "is_deleted": False,
+                "ciphertext": "ciphertext_old",
+                "nonce": "nonce_old"
+            }
+            res_old = db.process_gossip_update(old_gossip)
+            self.assertFalse(res_old, "La donnée ancienne (T=50) aurait dû être rejetée en faveur de T=100.")
+            
+            # Vérification : C'est toujours V1 en DB
+            current = db.get_record(record_id)
+            self.assertEqual(current["ciphertext"], "ciphertext_v1")
+            
+            # --- 3. Réception d'un Gossip d'un P2P contenant une donnée plus RECENTE (T=200) ---
+            new_gossip = {
+                "uuid": record_id,
+                "updated_at": 200.0,
+                "is_deleted": False,
+                "ciphertext": "ciphertext_v2",
+                "nonce": "nonce_v2"
+            }
+            res_new = db.process_gossip_update(new_gossip)
+            self.assertTrue(res_new, "La donnée fraîche (T=200) aurait dû écraser T=100.")
+            
+            # Vérification : La DB a été mise à jour avec V2
+            updated = db.get_record(record_id)
+            self.assertEqual(updated["ciphertext"], "ciphertext_v2")
+            
+        finally:
+            if os.path.exists(test_db):
+                os.remove(test_db)
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,73 +1,108 @@
-# P2P-SafeGuard
+# 🛡️ P2P-SafeGuard
 
-P2P-SafeGuard est un gestionnaire de mots de passe décentralisé ("Zero-Trust") fonctionnant en Peer-to-Peer (P2P). Il élimine le besoin d'un serveur cloud centralisé et garantit que vos secrets ne sont lisibles que dans un environnement physique de confiance.
+**P2P-SafeGuard** is a decentralized, Zero-Trust password manager operating over a Peer-to-Peer (P2P) network. 
+It eliminates the need for any centralized cloud server and guarantees that your secrets are only readable within a trusted physical environment.
 
-## 🏗️ Architecture du Projet
+## ✨ Key Features
 
-Le système est conçu autour d'une séparation stricte des responsabilités entre deux modules qui communiquent via des interfaces locales.
+- **No Central Server**: Total synchronization across your devices via a custom P2P Gossip Protocol.
+- **Context-Aware Security (Proof of Location)**: Encryption keys unlock *only* if the device is connected to an authorized Wi-Fi network (BSSID fingerprinting).
+- **Advanced Cryptography**: Uses `AES-256-GCM` for authenticated encryption and `PBKDF2-HMAC-SHA256` for strong key derivation.
+- **Conflict Resolution (LWW)**: Automatic "Last Write Wins" logic to prevent data loss during concurrent offline edits.
+- **Seamless TUI**: An interactive, modern Terminal User Interface for daily secret management.
 
-1. **Module Vault (Sécurité & Stockage)** : Gère le chiffrement, le déchiffrement, le stockage sur disque (`vault.json`) et la validation du contexte physique. Il ignore tout du réseau.
-2. **Module Sync (Réseau & P2P)** : Gère le serveur TCP, le client TCP, et le protocole épidémique. Il ne connaît ni les clés de chiffrement, ni les données en clair.
+---
 
-### Diagramme de flux de données
+## 🏗️ Project Architecture
+
+The system is designed around a strict separation of concerns, divided into two independent modules:
+
+1. **Vault Module (Security & Storage)**: Handles encryption, decryption, disk storage (`vault.json`), and physical context validation. It is entirely unaware of the network.
+2. **Sync Module (Network & P2P)**: Handles the TCP server, TCP client, and the epidemic protocol. It never sees plain-text data or encryption keys.
+
+### Data Flow Diagram
 ```mermaid
 graph LR
-    UI[Interface / CLI] <--> Vault[Vault Core]
-    Vault <--> DB[(Stockage JSON)]
-    Vault -- "Update Local" --> Network[Network Core]
-    Network -- "Update Distant" --> Vault
-    Network <--> Peers((Pairs P2P))
+    UI[Interactive TUI / CLI] <--> Vault[Vault Core]
+    Vault <--> DB[(Local JSON Storage)]
+    Vault -- "Local Update Event" --> Network[Network Core]
+    Network -- "Remote Sync Event" --> Vault
+    Network <--> Peers((P2P Nodes))
 ```
 
-## 📖 Documentation de base
+---
 
-### Prérequis
+## 🚀 Getting Started (Local Usage)
+
+### Prerequisites
 - Python 3.10+
-- Dépendance principale : `pycryptodome` (voir `requirements.txt`)
-- Docker et Docker Compose (pour les tests d'intégration simulés)
+- `pycryptodome` and TUI libraries (see `requirements.txt`)
+- Linux OS (for default `iwgetid` BSSID gathering)
 
-### Lancer l'application localement
+### Installation
 
-1. Créez (ou modifiez) le fichier `config.json` à la racine :
+1. Clone the repository and install dependencies:
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+2. Create or modify the `config.json` file at the root of the project:
 ```json
 {
-  "node_id": "Mon_Device_1",
+  "node_id": "My_Personal_Laptop",
   "host": "0.0.0.0",
   "port": 5000,
   "peers": [{"ip": "192.168.1.15", "port": 5000}],
-  "allowed_bssids_hashes": ["votre_hash_bssid_autorise"]
+  "allowed_bssids_hashes": ["e551de0..."]  // SHA-256 hash of your Home router MAC address
 }
 ```
 
-2. Installez les dépendances et lancez le programme :
+3. Launch the Application:
 ```bash
-pip install -r requirements.txt
-python main.py
+make cli
 ```
-Un CLI interactif s'ouvrira pour ajouter/lire vos secrets si votre Wi-Fi correspond au BSSID autorisé.
+An interactive terminal window will open to initialize your Master Password and manage your secrets.
 
-### Lancer le cluster de test (Docker)
-Un cluster simulé de 3 nœuds en anneau est fourni pour tester la résilience P2P et la résolution de conflits.
-```bash
-docker compose up -d --build
-# Injecter une fausse donnée sur le noeud 1 pour tester la propagation :
-python tests/scripts/test_gossip.py
-```
+---
 
-## 🧠 Algorithmes employés & Justifications
+## 🧪 Testing and Docker Cluster
+
+P2P-SafeGuard comes with an automated testing suite and a fully configured **3-Node Docker Cluster** to experiment with the synchronization and conflict resolution safely.
+
+### Available Makefile Commands
+
+| Command | Description |
+|---|---|
+| `make cli` | Runs the interactive Python script on your host machine. |
+| `make test-unit` | Runs the unit test suite inside a blank Docker container (Tests Crypto, Gossip, and CRUD Logic). |
+| `make test-func` | Runs functional tests inside a Docker container (Tests Vault initialization, reset, and login denial). |
+| `make test-all` | Chains all validation tests. |
+| `make docker-up` | Builds and starts the 3-Node P2P simulation cluster in the background. |
+| `make docker-exec n=X` | **[Very useful]** Attaches an interactive terminal to a specific node (where X is 1, 2, or 3) to test synchronization live. |
+| `make docker-down` | Stops and gracefully removes the simulation containers. |
+| `make clean` | Deletes all local `vault*.json` files. |
+
+> [!TIP]
+> **Testing Synchronization Life**: Run `make docker-up`, then open two terminals. In the first one, type `make docker-exec n=1` and add a secret. In the second one, type `make docker-exec n=2`, list the secrets, and watch your data instantly appear from the network!
+
+---
+
+## 🧠 Algorithms & Technical Justifications
 
 ### 1. Proof of Location (BSSID Fingerprinting)
-- **Pourquoi ?** P2P-SafeGuard ajoute une couche de sécurité contextuelle. Si votre disque dur est dérobé ou si votre ordinateur portable est ouvert dans un lieu public, l'application refusera de déchiffrer vos données.
-- **Comment ?** En récupérant l'adresse MAC (BSSID) du routeur Wi-Fi auquel vous êtes connecté. Seuls les routeurs dont le hash est présent dans `config.json` permettent l'activation du moteur cryptographique.
+- **Why?** P2P-SafeGuard adds a contextual security layer. If your hard drive is stolen or your laptop is booted in a public place, the application will forcefully refuse to decrypt your data.
+- **How?** By reading the current MAC address (BSSID) of the connected Wi-Fi router. Only routers whose hash matches the `allowed_bssids_hashes` list in `config.json` will allow the cryptographic engine to start.
 
-### 2. Chiffrement AES-256-GCM & Dérivation PBKDF2
-- **Pourquoi GCM ?** Le mode Galois/Counter Mode (GCM) fournit un "Authentication Tag". Contrairement au mode CBC classique, GCM empêche et détecte toute altération du fichier `.json`. Si un attaquant modifie un caractère du fichier chiffré, le déchiffrement échouera proprement.
-- **Pourquoi PBKDF2 ?** Pour dériver de manière sécurisée une clé robuste de 256 bits à partir de votre mot de passe maître en utilisant 100 000 itérations, ce qui ralentit considérablement les attaques par force brute.
+### 2. Encryption: AES-256-GCM & PBKDF2
+- **Why GCM?** Galois/Counter Mode (GCM) provides an "Authentication Tag". Unlike standard CBC mode, GCM explicitly prevents and detects file modifications. If an attacker tampers with a single byte of your `vault.json`, the decryption fails immediately.
+- **Why PBKDF2?** To securely derive a 256-bit key from your human Master Password using 100,000 algorithmic iterations, considerably slowing down brute-force attacks.
 
-### 3. Protocole Gossip avec Path Vector
-- **Pourquoi ?** Pour distribuer rapidement et sans serveur central (P2P) les données à l'ensemble des appareils.
-- **Comment (Path Vector) ?** Chaque message P2P intègre une liste des nœuds qu'il a déjà traversés. Si un nœud reçoit un message où son propre identifiant figure déjà dans le vecteur, il jette le message. *Justification : Cela évite les tempêtes de broadcast (boucles infinies) inhérentes aux topologies réseau décentralisées fermées.*
+### 3. Gossip Protocol with Path Vector
+- **Why?** To distribute data quickly inside a P2P network without any central server.
+- **How?** Every P2P broadcast embeds a list of all node IDs it has already visited. If a node receives a message and sees its own ID in the "Path Vector", it drops the package. *This prevents infinite broadcast storms.*
 
-### 4. Résolution de conflit LWW (Last Write Wins)
-- **Pourquoi ?** Dans un système distribué asynchrone, deux nœuds peuvent modifier la même donnée. Il faut un consensus sans serveur centralisateur (pas de base SQL centrale).
-- **Comment ?** Chaque enregistrement dispose d'un `updated_at` (Timestamp UNIX). Lorsqu'un nœud reçoit une modification du réseau, il compare le Timestamp réseau avec son Timestamp local. Si la version réseau est strictement supérieure, il écrase sa donnée locale et propage le message. Sinon, il ignore silencieusement la donnée obsolète.
+### 4. Conflict Resolution (Last Write Wins - LWW)
+- **Why?** In an asynchronous distributed network, two nodes could modify the same password while briefly disconnected.
+- **How?** Every record has an `updated_at` UNIX Timestamp. When a node receives an update from the network, it compares the packet's timestamp with its local database. If the network version is strictly newer, the local data is overwritten and propagated. If the local data is newer, the old network packet is silently ignored.
