@@ -8,5 +8,9 @@
       "nonce": "test_nonce_base64_for_docker",
       "ciphertext": "test_ciphertext_base64_for_docker"
     }
-  ]
+  ],
+  "password_check": {
+    "ciphertext": "UaTjrZ0Qn8AvUt2pBXaFQA/tvc4Qe6NWvkz7yF+A0zWbtRY=",
+    "nonce": "e6qsiH0NhvoWBnREXT52JQ=="
+  }
 }

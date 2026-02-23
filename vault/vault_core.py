@@ -17,6 +17,18 @@ class VaultCore:
         self.db_manager = DBManager(db_path)
         self.on_sync_trigger = on_sync_trigger # Callback pour appeler Module B quand une action locale arrive
         
+        # Vérification du Master Password (Nouveau Vault vs Vault existant)
+        pwd_check = self.db_manager.get_password_check()
+        if pwd_check:
+            # Vault existant : on vérifie
+            res = self.crypto_service.decrypt(pwd_check["ciphertext"], pwd_check["nonce"])
+            if res != "P2P-SAFEGUARD-VERIF":
+                raise ValueError("Master Password incorrect ou base corrompue !")
+        else:
+            # Nouveau Vault : on initialise la vérification
+            ct, nonce = self.crypto_service.encrypt("P2P-SAFEGUARD-VERIF")
+            self.db_manager.set_password_check(ct, nonce)
+        
     def _check_access(self) -> bool:
         """Vérifie si le contexte BSSID est valide."""
         return self.context_checker.is_context_valid()

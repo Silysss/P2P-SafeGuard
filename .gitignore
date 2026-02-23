@@ -1,0 +1,5 @@
+venv/
+sync/__pycache__
+tests/__pycache__
+vault/__pycache__
+vault*.json

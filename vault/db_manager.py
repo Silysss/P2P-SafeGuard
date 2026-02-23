@@ -36,6 +36,18 @@ class DBManager:
         with open(self.db_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
+    def get_password_check(self) -> Optional[dict]:
+        """Retourne le bloc de vérification du mot de passe (ciphertext, nonce) s'il existe."""
+        return self.data.get("password_check")
+
+    def set_password_check(self, ciphertext: str, nonce: str):
+        """Enregistre le bloc de vérification du mot de passe maître."""
+        self.data["password_check"] = {
+            "ciphertext": ciphertext,
+            "nonce": nonce
+        }
+        self._save_db()
+
     def get_all_records(self) -> List[dict]:
         """Retourne tous les records non supprimés (soft delete exclu)."""
         return [r for r in self.data.get("records", []) if not r.get("is_deleted", False)]

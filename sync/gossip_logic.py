@@ -25,6 +25,15 @@ class GossipLogic:
             "payload": record
         }
 
+    def build_sync_request(self) -> dict:
+        """
+        Construit un message pour demander à tous les pairs de nous pousser leur base de données.
+        """
+        return {
+            "type": "SYNC_REQUEST",
+            "sender_id": self.my_node_id
+        }
+
     def should_process_message(self, message: dict) -> Tuple[bool, dict]:
         """
         Vérifie si le message doit être traité (pour éviter les boucles infinies).

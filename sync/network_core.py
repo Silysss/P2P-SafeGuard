@@ -11,10 +11,12 @@ class NetworkCore:
     Fait le lien entre le Serveur, le Client, la logique Gossip, et le Vault local.
     """
     def __init__(self, node_id: str, host: str, port: int, peers: List[Dict[str, int]], 
-                 apply_gossip_callback: Callable[[dict], bool]):
+                 apply_gossip_callback: Callable[[dict], bool],
+                 get_all_records_callback: Callable[[], List[dict]]):
         self.node_id = node_id
         self.peers = peers # Liste de dictionnaires ex: [{'ip': '127.0.0.1', 'port': 5001}]
         self.apply_gossip_callback = apply_gossip_callback
+        self.get_all_records_callback = get_all_records_callback
         
         self.gossip_logic = GossipLogic(node_id)
         self.server = SocketServer(host, port, self._on_message_received)
@@ -33,6 +35,14 @@ class NetworkCore:
         Appelé quand le serveur TCP reçoit un message.
         Logique de réception et vérification Gossip.
         """
+        if message.get("type") == "SYNC_REQUEST":
+            sender_id = message.get("sender_id")
+            # Un pair nous demande tout notre catalogue, on lui broadcast toutes nos entrées en individuel
+            if sender_id and sender_id != self.node_id:
+                for record in self.get_all_records_callback():
+                    self.trigger_local_update(record)
+            return
+
         should_process, record_payload = self.gossip_logic.should_process_message(message)
         
         if not should_process:
@@ -54,6 +64,13 @@ class NetworkCore:
         L'utilisateur local a fait une mise à jour, on l'envoie en broadcast à tous les pairs.
         """
         message = self.gossip_logic.build_gossip_message(new_record)
+        self._propagate_to_peers(message)
+
+    def request_sync(self):
+        """
+        Appelé au démarrage : broadcast un SYNC_REQUEST pour récupérer l'historique des pairs.
+        """
+        message = self.gossip_logic.build_sync_request()
         self._propagate_to_peers(message)
 
     def _propagate_to_peers(self, message: dict):
