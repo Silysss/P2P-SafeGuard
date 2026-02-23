@@ -60,5 +60,48 @@ class TestP2PSafeGuard(unittest.TestCase):
         self.assertTrue(should_process)
         self.assertEqual(payload, record)
 
+    def test_vault_core_crud(self):
+        """Test de la logique métier Ajout / Liste / Suppression logicielle du Vault"""
+        from vault.vault_core import VaultCore
+        import hashlib
+        
+        # Mock de l'environnement physique
+        os.environ['P2P_MOCK_BSSID'] = "TEST_BSSID"
+        mock_hash = hashlib.sha256(b"TEST_BSSID").hexdigest()
+        
+        test_db = "test_crud_vault.json"
+        if os.path.exists(test_db): os.remove(test_db)
+            
+        try:
+            vault = VaultCore("test_pwd", allowed_bssids_hashes=[mock_hash], db_path=test_db)
+            
+            # 1. Ajout de secrets
+            vault.add_or_update_secret("Github", "milo", "123", "notes")
+            vault.add_or_update_secret("Twitter", "milo", "abc", "")
+            
+            secrets = vault.get_all_secrets_decrypted()
+            self.assertEqual(len(secrets), 2, "Il devrait y avoir 2 secrets.")
+            
+            # Recherche locale (comportement simulé de la CLI)
+            search_res = [s for s in secrets if "twit" in s["service"].lower()]
+            self.assertEqual(len(search_res), 1)
+            self.assertEqual(search_res[0]["service"], "Twitter")
+            
+            uuid_twitter = search_res[0]["_uuid"]
+            
+            # 2. Suppression d'un secret (Soft delete)
+            res = vault.delete_secret(uuid_twitter)
+            self.assertTrue(res, "La suppression devrait retourner True")
+            
+            # 3. Vérification de la non-exposition
+            secrets_after = vault.get_all_secrets_decrypted()
+            self.assertEqual(len(secrets_after), 1, "Le secret supprimé ne doit plus être listé.")
+            self.assertEqual(secrets_after[0]["service"], "Github")
+            
+        finally:
+            # Nettoyage
+            if os.path.exists(test_db):
+                os.remove(test_db)
+
 if __name__ == "__main__":
     unittest.main()
